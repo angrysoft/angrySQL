@@ -12,22 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import MySQLdb
-import warnings
-import sys
-import datetime
-import sqlite3
-
-# __all__ = [
-#     'Column',
-#     'Integer',
-#     'SmallInteger',
-#     'BigInt',
-#     'String',
-#     'Base',
-#
-# ]
-
 
 def or_(*args):
     return ' OR '.join(args)
@@ -468,88 +452,6 @@ class BaseDatabase:
         self.conn.close()
 
 
-class MySqlDatabase(BaseDatabase):
-    """MySQL Database Connection"""
-    __tabletemplate__ = 'CREATE TABLE IF NOT EXISTS {} ({}) ENGINE=InnoDB'
-
-    def __init__(self, config, echo=False):
-        """
-        Create a connection to the database.
-        :param config:
-        :param echo:
-        """
-        super(MySqlDatabase, self).__init__(config, echo=echo)
-        try:
-            self.conn = MySQLdb.connect(user=config.get('user'),
-                                        password=config.get('password'),
-                                        database=config.get('dbname'),
-                                        charset='utf8')
-            self.cur = self.conn.cursor()
-
-        except MySQLdb.OperationalError as err:
-            sys.stderr.write('Connection Error: {}\n'.format(err))
-            sys.exit(1)
-        warnings.filterwarnings("ignore", category=MySQLdb.Warning)
-
-    def execute(self, sql, args=()):
-        errors = None
-        try:
-            if self.echo:
-                print(sql, args)
-            self.cur.execute(sql, args)
-
-        except MySQLdb.IntegrityError as err:
-            print(err)
-            errors = err
-        except MySQLdb.OperationalError as err:
-            print(err)
-            errors = err
-        except MySQLdb.ProgrammingError as err:
-            print(err)
-            errors = err
-        except:
-            print('something goes wrong')
-        finally:
-            return errors
-
-
-class SqliteDatabase(BaseDatabase):
-    """Sqlite3 Database Connection"""
-    __tabletemplate__ = 'CREATE TABLE IF NOT EXISTS {} ({})'
-
-    def __init__(self, config, echo=False):
-        super(SqliteDatabase, self).__init__(config, echo=echo)
-        try:
-            self.conn = sqlite3.connect(config.get('dbfile', ':memory:'))
-            self.cur = self.conn.cursor()
-
-        except sqlite3.OperationalError as err:
-            sys.stderr.write('Connection Error: {}\n'.format(err))
-            sys.exit(1)
-        warnings.filterwarnings("ignore", category=sqlite3.Warning)
-
-    def execute(self, sql, args=()):
-        errors = None
-        try:
-            if self.echo:
-                print(sql, args)
-            self.cur.execute(sql, args)
-
-        except sqlite3.IntegrityError as err:
-            print(err)
-            errors = err
-        except sqlite3.OperationalError as err:
-            print(err)
-            errors = err
-        except sqlite3.ProgrammingError as err:
-            print(err)
-            errors = err
-        except:
-            print('something goes wrong')
-        finally:
-            return errors
-
-
 class MetaBaseModel(type):
 
     def __new__(mcs, name, bases, attrs):
@@ -597,11 +499,4 @@ class BaseModel(metaclass=MetaBaseModel):
     #         return attr.value
     #     else:
     #         return attr
-
-
-
-
-
-
-
 

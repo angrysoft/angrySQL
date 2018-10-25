@@ -7,7 +7,8 @@ setuptools.setup(
     url='https://bitbucket.org/angrysoft/angrySQL',
     author='Sebastian Zwierzchowski',
     author_email='sebastian.zwierzchowski@gmail.com',
-    packages=setuptools.find_packages(),
+    packages=['angrysql'],
+    install_requires=['MySQLdb'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
