@@ -469,9 +469,15 @@ class BaseDatabase:
 
 
 class MySqlDatabase(BaseDatabase):
+    """MySQL Database Connection"""
     __tabletemplate__ = 'CREATE TABLE IF NOT EXISTS {} ({}) ENGINE=InnoDB'
 
     def __init__(self, config, echo=False):
+        """
+        Create a connection to the database.
+        :param config:
+        :param echo:
+        """
         super(MySqlDatabase, self).__init__(config, echo=echo)
         try:
             self.conn = MySQLdb.connect(user=config.get('user'),
@@ -508,6 +514,7 @@ class MySqlDatabase(BaseDatabase):
 
 
 class SqliteDatabase(BaseDatabase):
+    """Sqlite3 Database Connection"""
     __tabletemplate__ = 'CREATE TABLE IF NOT EXISTS {} ({})'
 
     def __init__(self, config, echo=False):
