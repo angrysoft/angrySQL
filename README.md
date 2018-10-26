@@ -10,7 +10,7 @@
 
 ##  Create models
 ```python
-from angrySQL import *
+from angrysql import BaseModel, Column, Integer, String
 
 
 class Users(BaseModel):
@@ -24,12 +24,12 @@ class Users(BaseModel):
 ## Create db connector
 ```python
 from models import *
-from angrySQL import MySqlDatabase
+from angrysql.mysqldb import Connection
 config = {'user': 'db_user_name',
           'password': 'db_password',
           'database': 'db_name'}
 
-db = MySqlDatabase(config, echo=True)
+db = Connection(config, echo=True)
 
 db.create_tables(Users)
 

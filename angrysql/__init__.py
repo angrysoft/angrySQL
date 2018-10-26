@@ -11,6 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+__all__ = ['Integer', 'TinyInteger', 'SmallInteger',
+           'BigInt', 'String', 'Year', 'Date', 'Time',
+           'DataTime', 'TimeStamp', 'BaseModel', 'Column',
+           'or_', 'and_']
+
 from .schema import (
     Integer,
     TinyInteger,
@@ -23,5 +29,6 @@ from .schema import (
     DataTime,
     TimeStamp,
     BaseModel,
+    Column,
     or_,
     and_)

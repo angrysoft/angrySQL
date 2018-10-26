@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from .dialects import Sql
 
 
 def or_(*args):
@@ -29,7 +30,7 @@ class ColumnType:
 
 
 class Integer(ColumnType):
-    __columntype__ = 'int'
+    __columntype__ = 'integer'
     __unsigned__ = False
     __zerofill__ = False
 
@@ -227,20 +228,20 @@ class Select(BaseQuery):
         for c in self.columns:
             if c.primary_key:
                 self.__db__.execute("{} WHERE {} = '{}'".format(self._sql_base, c.column_name, model_id))
-                if self.__db__.rowcount > 0:
-                    return self.__db__.fetch_model(self.model, one=True)[0]
+                result = self.__db__.fetch_model(self.model, one=True)
+                if result:
+                    return result[0]
                 return None
 
     def all(self):
         self.__db__.execute(self.sql)
-        if self.__db__.rowcount > 0:
-            return self.__db__.fetch_model(self.model)
-        return []
+        return self.__db__.fetch_model(self.model)
 
     def first(self):
         self.__db__.execute(self.sql)
-        if self.__db__.rowcount > 0:
-            return self.__db__.fetch_model(self.model, one=True)[0]
+        result = self.__db__.fetch_model(self.model, one=True)
+        if result:
+            return result[0]
         return None
 
     def where(self, *conditions):
@@ -278,7 +279,7 @@ class Insert(BaseQuery):
         for c in self.columns:
             val = getattr(self.model, c.column_name)
             if not isinstance(val, Column):
-                names.append(c.column_full_name)
+                names.append(c.column_name)
                 values.append("'{}'".format(val))
         return '({}) VALUES ({})'.format(','.join(names), ','.join(values))
 
@@ -357,16 +358,14 @@ class Join(Select):
 
     def all(self):
         self.__db__.execute(self.sql)
-        if self.__db__.rowcount > 0:
-            func = {}
-            for c in self.columns:
-                print(self._get_column_alias(c.column_full_name))
-                func[self._get_column_alias(c.column_full_name)] = Column(String())
+        func = {}
+        for c in self.columns:
+            print(self._get_column_alias(c.column_full_name))
+            func[self._get_column_alias(c.column_full_name)] = Column(String())
 
-            Model = type('Model', (BaseModel,), func)
+        Model = type('Model', (BaseModel,), func)
 
-            return self.__db__.fetch_model(Model)
-        return []
+        return self.__db__.fetch_model(Model)
 
     @property
     def sql(self):
@@ -383,6 +382,7 @@ class Join(Select):
 
 class BaseDatabase:
     __tabletemplate__ = 'CREATE TABLE IF NOT EXISTS {} ({})'
+    __dialect__ = Sql()
     conn = None
     cur = None
 
@@ -402,14 +402,52 @@ class BaseDatabase:
 
     def create_tables(self, *models):
         for model in models:
-            sql = self.__tabletemplate__.format(model.table_name,
-                                                ','.join([c.sql for c in model.columns()]))
+            # sqlite need foreign keys on end
+            columns = list()
+            for col in model.columns():
+                columns.append(self.column_to_sql(col))
+
+            for fkey in model.columns():
+                if fkey.foreignkey:
+                    columns.append(self.foreignkey_column_sql(fkey))
+
+            sql = self.__dialect__.create_table.format(model.table_name, ','.join(columns))
+
             self.execute(sql)
         self.commit()
 
+    def column_to_sql(self, column):
+        opts = list()
+        opts.append(column.column_name)
+        opts.append(self.__dialect__.column_type(column.column_type))
+        if column.primary_key:
+            if isinstance(column.column_type, Integer):
+                opts.append(self.__dialect__.primary_key)
+            else:
+                raise ValueError('Integer is needed')
+        else:
+            if column.unique:
+                opts.append(self.__dialect__.unique)
+            if not column.nullable:
+                opts.append(self.__dialect__.notnull)
+            if column.default:
+                opts.append(self.__dialect__.default(column.default))
+
+        return ' '.join(opts)
+
+    def foreignkey_column_sql(self, column):
+        if column.foreignkey.find('.') < 0:
+            raise ValueError('Proper value is tablename.columnname')
+        tab, col = column.foreignkey.split('.', 1)
+
+        return self.__dialect__.foreignkey(column_name=column.column_name,
+                                           table_name=tab,
+                                           owner_column=col,
+                                           column_full_name=column.column_full_name)
+
     def execute(self, sql, args=()):
         if self.echo:
-            print(sql, args)
+            print(f'{sql} args = {args}')
         self.cur.execute(sql, args)
 
     def fetch(self, one=None):

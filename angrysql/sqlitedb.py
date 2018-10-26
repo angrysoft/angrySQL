@@ -13,24 +13,27 @@
 # limitations under the License.
 import sys
 import sqlite3
-import warnings
+# import warnings
 from .schema import BaseDatabase
+from .dialects import Sqlite
 
 
 class Connection(BaseDatabase):
     """Sqlite3 Database Connection"""
     __tabletemplate__ = 'CREATE TABLE IF NOT EXISTS {} ({})'
+    __dialect__ = Sqlite()
 
     def __init__(self, config, echo=False):
         super(Connection, self).__init__(config, echo=echo)
         try:
             self.conn = sqlite3.connect(config.get('dbfile', ':memory:'))
             self.cur = self.conn.cursor()
+            self.cur.execute('PRAGMA foreign_keys = ON')
 
         except sqlite3.OperationalError as err:
             sys.stderr.write('Connection Error: {}\n'.format(err))
             sys.exit(1)
-        warnings.filterwarnings("ignore", category=sqlite3.Warning)
+        # warnings.filterwarnings("ignore", category=sqlite3.Warning)
 
     def execute(self, sql, args=()):
         errors = None

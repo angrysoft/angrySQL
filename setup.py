@@ -8,7 +8,7 @@ setuptools.setup(
     author='Sebastian Zwierzchowski',
     author_email='sebastian.zwierzchowski@gmail.com',
     packages=['angrysql'],
-    install_requires=['MySQLdb'],
+    install_requires=['mysqlclient'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
