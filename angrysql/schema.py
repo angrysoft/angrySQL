@@ -451,8 +451,11 @@ class BaseDatabase:
         self.cur.execute(sql, args)
 
     def fetch(self, one=None):
+        rows = list()
         if one:
-            rows = (self.cur.fetchone(),)
+            r = self.cur.fetchone()
+            if r:
+                rows.append(r)
         else:
             rows = self.cur.fetchall()
         ret = []
@@ -464,13 +467,16 @@ class BaseDatabase:
         return ret
 
     def fetch_model(self, model, one=False):
+        rows = list()
         if one:
-            rows = (self.cur.fetchone(),)
+            r = self.cur.fetchone()
+            if r:
+                rows.append(r)
         else:
             rows = self.cur.fetchall()
 
         ret = []
-
+        print(rows)
         for row in rows:
             new_model = model()
             for idx, col in enumerate(self.cur.description):
