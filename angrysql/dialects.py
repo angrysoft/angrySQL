@@ -27,7 +27,7 @@ class Sqlite(Sql):
 
     @staticmethod
     def default(args):
-        return "DEFAULT {}".format(args)
+        return f'DEFAULT {args}'
 
     @staticmethod
     def foreignkey(column_name, table_name, owner_column, column_full_name):

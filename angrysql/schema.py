@@ -430,7 +430,7 @@ class BaseDatabase:
                 opts.append(self.__dialect__.unique)
             if not column.nullable:
                 opts.append(self.__dialect__.notnull)
-            if column.default:
+            if column.default is not None:
                 opts.append(self.__dialect__.default(column.default))
 
         return ' '.join(opts)
@@ -476,7 +476,6 @@ class BaseDatabase:
             rows = self.cur.fetchall()
 
         ret = []
-        print(rows)
         for row in rows:
             new_model = model()
             for idx, col in enumerate(self.cur.description):
