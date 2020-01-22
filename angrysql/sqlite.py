@@ -1,4 +1,4 @@
-# Copyright 2018 AngrySoft Sebastian Zwierzchowski
+# Copyright 2019 AngrySoft Sebastian Zwierzchowski
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,34 +13,42 @@
 # limitations under the License.
 import sys
 import sqlite3
-# import warnings
-from .schema import BaseDatabase
-from .dialects import Sqlite
+from .base import BaseDatabase
 
 
-class Connection(BaseDatabase):
-    """Sqlite3 Database Connection"""
-    __tabletemplate__ = 'CREATE TABLE IF NOT EXISTS {} ({})'
-    __dialect__ = Sqlite()
-
-    def __init__(self, config, echo=False):
-        super(Connection, self).__init__(config, echo=echo)
+class SqliteConnection(BaseDatabase):
+    def __init__(self, dbfile=':memory:', echo=False):
+        super().__init__(echo=echo)
+        
+        self.echo = echo
         try:
-            self.conn = sqlite3.connect(config.get('dbfile', ':memory:'))
-            self.cur = self.conn.cursor()
-            self.cur.execute('PRAGMA foreign_keys = ON')
+            self._conn = sqlite3.connect(dbfile)
+            self._cur = self._conn.cursor()
+            self._cur.execute('PRAGMA foreign_keys = ON')
 
         except sqlite3.OperationalError as err:
             sys.stderr.write('Connection Error: {}\n'.format(err))
             sys.exit(1)
         # warnings.filterwarnings("ignore", category=sqlite3.Warning)
+    
+    @property
+    def primary_key(self):
+        return 'PRIMARY KEY'
+    
+    @staticmethod
+    def default(args):
+        return f'DEFAULT {args}'
 
+    @staticmethod
+    def foreignkey(column_name, table_name, owner_column, column_full_name):
+        return f"FOREIGN KEY({column_name}) REFERENCES {table_name}({owner_column})"
+    
     def execute(self, sql, args=()):
         errors = None
         try:
             if self.echo:
                 print(sql, args)
-            self.cur.execute(sql, args)
+            self._cur.execute(sql, args)
 
         except sqlite3.IntegrityError as err:
             print(err)
@@ -51,7 +59,9 @@ class Connection(BaseDatabase):
         except sqlite3.ProgrammingError as err:
             print(err)
             errors = err
-        except:
-            print('something goes wrong')
+        except Exception as err:
+            print(f'something goes wrong: {err}')
         finally:
             return errors
+
+    
