@@ -13,3 +13,15 @@ class Connection:
         elif info.scheme == 'mariadb':
             from .mysql import MariaConnection
             return MariaConnection(user=info.username, password=info.password, host=info.hostname, dbname=info.path, port=info.port, echo=echo)
+        
+    def select(self, model):
+        """Select"""
+        pass
+    
+    def insert(self, moedel):
+        """Insert"""
+        pass
+    
+    def update(self, model):
+        """Update"""
+        pass

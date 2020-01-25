@@ -162,32 +162,32 @@ class Column:
             return '{} >= {}'.format(self.column_full_name, other.column_full_name)
         return "{} >= '{}'".format(self.column_full_name, other)
 
-    @property
-    def sql(self):
-        opts = list()
-        opts.append(self.column_name)
-        opts.append(str(self.column_type))
-        if self.primary_key:
-            if isinstance(self.column_type, Integer):
-                opts.append('NOT NULL AUTO_INCREMENT PRIMARY KEY'.format(self.column_type))
-            else:
-                raise ValueError('Integer is needed')
-        else:
-            if self.unique:
-                opts.append('UNIQUE')
-            if not self.nullable:
-                opts.append('NOT NULL')
-            if self.default:
-                opts.append("DEFAULT '{}'".format(self.default))
+    # @property
+    # def sql(self):
+    #     opts = list()
+    #     opts.append(self.column_name)
+    #     opts.append(str(self.column_type))
+    #     if self.primary_key:
+    #         if isinstance(self.column_type, Integer):
+    #             opts.append('NOT NULL AUTO_INCREMENT PRIMARY KEY'.format(self.column_type))
+    #         else:
+    #             raise ValueError('Integer is needed')
+    #     else:
+    #         if self.unique:
+    #             opts.append('UNIQUE')
+    #         if not self.nullable:
+    #             opts.append('NOT NULL')
+    #         if self.default:
+    #             opts.append("DEFAULT '{}'".format(self.default))
 
-        if self.foreignkey:
-            if self.foreignkey.find('.') < 0:
-                raise ValueError('Proper value is tablename.columnname')
-            tab, col = self.foreignkey.split('.', 1)
-            opts.append(',')
-            opts.append('CONSTRAINT fk_{fullname} FOREIGN KEY({name}) REFERENCES {table}({owner})'.format(
-                name=self.column_name, table=tab, owner=col, fullname=self.column_full_name.replace('.', '_')))
-        return ' '.join(opts)
+    #     if self.foreignkey:
+    #         if self.foreignkey.find('.') < 0:
+    #             raise ValueError('Proper value is tablename.columnname')
+    #         tab, col = self.foreignkey.split('.', 1)
+    #         opts.append(',')
+    #         opts.append('CONSTRAINT fk_{fullname} FOREIGN KEY({name}) REFERENCES {table}({owner})'.format(
+    #             name=self.column_name, table=tab, owner=col, fullname=self.column_full_name.replace('.', '_')))
+    #     return ' '.join(opts)
 
     def __str__(self):
         return self.column_full_name

@@ -80,40 +80,40 @@ class BaseDatabase:
         print(f'{sql} args = {args}')
         return ''
 
-    def fetch(self, one=None):
-        rows = list()
-        if one:
-            r = self._cur.fetchone()
-            if r:
-                rows.append(r)
-        else:
-            rows = self._cur.fetchall()
-        ret = []
-        for row in rows:
-            fields = {}
-            for idx, col in enumerate(self._cur.description):
-                fields[col[0]] = row[idx]
-            ret.append(fields)
+    # def fetch(self, one=None):
+    #     rows = list()
+    #     if one:
+    #         r = self._cur.fetchone()
+    #         if r:
+    #             rows.append(r)
+    #     else:
+    #         rows = self._cur.fetchall()
+    #     ret = []
+    #     for row in rows:
+    #         fields = {}
+    #         for idx, col in enumerate(self._cur.description):
+    #             fields[col[0]] = row[idx]
+    #         ret.append(fields)
+    #     return ret
+
+    def fetch(self, model):
+        ret = list()
+        for row in self._cur.fetchall():
+            ret.append(self._model(row, model))
         return ret
-
-    def fetch_model(self, model, one=False):
-        rows = list()
-        if one:
-            r = self._cur.fetchone()
-            if r:
-                rows.append(r)
-        else:
-            rows = self._cur.fetchall()
-
-        ret = []
-        for row in rows:
-            new_model = model()
-            for idx, col in enumerate(self._cur.description):
-                if hasattr(new_model, col[0]):
-                    setattr(new_model, col[0], row[idx])
-            ret.append(new_model)
-        return ret
-
+    
+    def fetchone(self, model):
+        row = self._cur.fetchone()
+        if row:
+            return self._model(row, model)
+    
+    def _model(self, row, model):
+        new_model = model()
+        for idx, col in enumerate(self._cur.description):
+            if hasattr(new_model, col[0]):
+                setattr(new_model, col[0], row[idx])
+        return new_model
+                    
     def commit(self):
         self._conn.commit()
     
@@ -185,29 +185,24 @@ class BaseQuery:
 class Select(BaseQuery):
     def __init__(self, model):
         super(Select, self).__init__(model)
-        self._sql_base = 'SELECT {} FROM {}'.format(
-            ','.join([c.column_full_name for c in self.columns]),
-            model.table_name)
+        self._sql_base = f"SELECT {','.join([c.column_full_name for c in self.columns])} FROM {model.table_name}"
 
     def get(self, model_id):
+            self.__db__.execute(f"{self._sql_base} WHERE {self._get_primary_key_name()} = '{model_id}'")
+            return self.__db__.fetchone(self.model)
+    
+    def _get_primary_key_name(self):
         for c in self.columns:
             if c.primary_key:
-                self.__db__.execute("{} WHERE {} = '{}'".format(self._sql_base, c.column_name, model_id))
-                result = self.__db__.fetch_model(self.model, one=True)
-                if result:
-                    return result[0]
-                return None
+                return c.column_name
 
     def all(self):
         self.__db__.execute(self.sql)
-        return self.__db__.fetch_model(self.model)
+        return self.__db__.fetch(self.model)
 
-    def first(self):
+    def one(self):
         self.__db__.execute(self.sql)
-        result = self.__db__.fetch_model(self.model, one=True)
-        if result:
-            return result[0]
-        return None
+        return  self.__db__.fetchone(self.model)
 
     def where(self, *conditions):
         self._where.extend(conditions)
@@ -233,9 +228,7 @@ class Insert(BaseQuery):
     def __init__(self, model):
         super(Insert, self).__init__(model)
 
-        self._sql_base = 'INSERT INTO {} {}'.format(model.table_name,
-                                                    self._get_column_and_values())
-
+        self._sql_base = f'INSERT INTO {model.table_name} {self._get_column_and_values()}'
         self.errors = self.__db__.execute(self.sql)
 
     def _get_column_and_values(self):
@@ -245,15 +238,14 @@ class Insert(BaseQuery):
             val = getattr(self.model, c.column_name)
             if not isinstance(val, Column):
                 names.append(c.column_name)
-                values.append("'{}'".format(val))
-        return '({}) VALUES ({})'.format(','.join(names), ','.join(values))
+                values.append(f"'{val}'")
+        return f"({','.join(names)}) VALUES ({','.join(values)})"
 
 
 class Update(BaseQuery):
     def __init__(self, model):
         super(Update, self).__init__(model)
-        self._sql_base = 'UPDATE {} SET {}'.format(model.table_name,
-                                                   self._get_column_and_values())
+        self._sql_base = f"UPDATE {model.table_name} SET {self._get_column_and_values()}"
 
     def all(self):
         self.errors = self.__db__.execute(self.sql)
@@ -275,7 +267,7 @@ class Update(BaseQuery):
 class Delete(BaseQuery):
     def __init__(self, model):
         super(Delete, self).__init__(model)
-        self._sql_base = 'DELETE FROM {}'.format(model.table_name)
+        self._sql_base = f'DELETE FROM {model.table_name}'
 
     def where(self, *conditions):
         self._where.extend(conditions)
@@ -330,7 +322,7 @@ class Join(Select):
 
         Model = type('Model', (BaseModel,), func)
 
-        return self.__db__.fetch_model(Model)
+        return self.__db__.fetch(Model)
 
     @property
     def sql(self):
@@ -339,12 +331,10 @@ class Join(Select):
             ret_sql += ' '
             ret_sql += ' '.join(self._joins)
         if self._where:
-            ret_sql += ' WHERE {}'.format(' AND '.join(self._where))
+            ret_sql += f" WHERE {' AND '.join(self._where)}"
         if self._order:
-            ret_sql += ' ORDER BY {}'.format(','.join(self._order))
+            ret_sql += f" ORDER BY {','.join(self._order)}"
         return ret_sql
-
-
 
 
 class MetaBaseModel(type):
@@ -380,6 +370,20 @@ class BaseModel(metaclass=MetaBaseModel):
     @classmethod
     def columns(cls):
         return cls.columns_obj
+    
+    def __init__(self, **args):
+        for k in args:
+            if hasattr(self, k):
+                setattr(self, k, args[k])
+            else:
+                raise ValueError(f'{k}: column name not in model')
+    
+    def __str__(self):
+        ret = ''
+        for x in self.columns():
+            ret += f'{x.column_name} : {getattr(self, x.column_name)} '
+        return ret
+            
 
     # def __setattr__(self, key, value):
     #     attr = self.__getattribute__(key)
