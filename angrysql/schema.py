@@ -120,7 +120,7 @@ class Column:
         return f"{self.column_full_name} LIKE '{other}'"
     
     def between(self, val1 , val2):
-        return f"BETWEEN '{val1}' AND '{val2}'"
+        return f"{self.column_full_name} BETWEEN '{val1}' AND '{val2}'"
 
     def in_(self, *args):
         values = ', '.join([f"'{a}'" for a in args])

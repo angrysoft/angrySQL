@@ -107,6 +107,11 @@ class BaseDatabase:
         if row:
             return self._model(row, model)
     
+    def fetchmany(self, model, size=1):
+        row = self._cur.fetchmany(size=self._cur.arraysize=size)
+        if row:
+            return self._model(row, model)
+    
     def _model(self, row, model):
         new_model = model()
         for idx, col in enumerate(self._cur.description):
@@ -213,6 +218,10 @@ class Select(BaseQuery):
     def one(self):
         self.__db__.execute(self.sql)
         return  self.__db__.fetchone(self.model)
+    
+    def many(self, size):
+        self.__db__.execute(self.sql)
+        return self.__db__.fetchmany(self.model, size)
 
     def where(self, *conditions):
         self._where.extend(conditions)
@@ -239,7 +248,7 @@ class Insert(BaseQuery):
         super(Insert, self).__init__(model)
 
         self._sql_base = f'INSERT INTO {model.table_name} {self._get_column_and_values()}'
-        self.errors = self.__db__.execute(self.sql)
+        # self.errors = self.__db__.execute(self.sql)
 
     def _get_column_and_values(self):
         #TODO add check if columnt is nullable
@@ -251,6 +260,10 @@ class Insert(BaseQuery):
                 names.append(c.column_name)
                 values.append(f"'{val}'")
         return f"({','.join(names)}) VALUES ({','.join(values)})"
+    
+    def do(self):
+        self.errors = self.__db__.execute(self.sql)
+        return self.__db__.rowcount
 
 
 class Update(BaseQuery):
