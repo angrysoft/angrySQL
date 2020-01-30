@@ -45,6 +45,8 @@ class WorkDays(BaseModel):
     end = Column(TimeStamp(), nullable=False)
     user_rate_id = Column(Integer(), foreignkey='user_rates.rate_id')
     
+def tprint(msg):
+    print(f'\t{msg}')
 
 class TestDb(unittest.TestCase):
     @classmethod
@@ -64,30 +66,70 @@ class TestDb(unittest.TestCase):
     
     def test_d_select_byid(self):
         u = self.db.select(Users).get(3)
-        print(u)
+        tprint(u)
         self.assertIsInstance(u, Users)
     
     def test_d_select_one(self):
         u = self.db.select(Users).one()
-        print(u)
+        tprint(u)
         self.assertIsInstance(u, Users)
     
     def test_d_select_all(self):
         u = self.db.select(Users).all()
         for i in u:
-            print(i)
+            tprint(i)
         self.assertIsInstance(u, list)
     
     def test_d_select_all_order(self):
         u = self.db.select(Users).order_by(Users.login, desc=True).all()
         for i in u:
-            print(i)
+            tprint(i)
         self.assertIsInstance(u, list)
     
-    def test_e_select_where(self):
+    def test_e01_select_where(self):
         u = self.db.select(Users).where(Users.login == 'user_99').all()
-        print(u)
+        tprint(u)
         self.assertIsInstance(u, list)
+    
+    def test_e02_select_login(self):
+        u = self.db.select(Users).columns(Users.login).where(Users.user_id < 10).all()
+        for i in u:
+            tprint(i.login)
+            tprint(i.email)
+        self.assertIsInstance(u, list)
+    
+    def test_e03_select_like(self):
+        u = self.db.select(Users).where(Users.login.like('user_0_')).all()
+        for i in u:
+            tprint(i.login)
+            tprint(i.email)
+        self.assertIsInstance(u, list)
+    
+    def test_e04_select_in(self):
+        u = self.db.select(Users).where(Users.login.in_('user_01', 'user_03', 'user_05')).all()
+        for i in u:
+            tprint(i.login)
+            tprint(i.email)
+        self.assertIsInstance(u, list)
+        
+    def test_e05_select_not_in(self):
+        u = self.db.select(Users).where(Users.login.not_in('user_01', 'user_03', 'user_05')).all()
+        for i in u:
+            tprint(i.login)
+            tprint(i.email)
+        self.assertIsInstance(u, list)
+        
+    def test_e06_select_between(self):
+        u = self.db.select(Users).where(Users.user_id.between(95, 99)).all()
+        for i in u:
+            tprint(f"{i.login} {i.user_id}")
+        self.assertIsInstance(u, list)
+    
+    def test_e06_delete_where(self):
+        u = self.db.delete(Users).where(Users.user_id > 10).do()
+        tprint(u)
+        self.assertIsInstance(u, int)
+    
         
     
 

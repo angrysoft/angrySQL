@@ -25,3 +25,6 @@ class Connection:
     def update(self, model):
         """Update"""
         pass
+    
+    def delete(self, model):
+        pass

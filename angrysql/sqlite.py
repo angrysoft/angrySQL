@@ -51,13 +51,13 @@ class SqliteConnection(BaseDatabase):
             self._cur.execute(sql, args)
 
         except sqlite3.IntegrityError as err:
-            print(err)
+            print('Integrity', err)
             errors = err
         except sqlite3.OperationalError as err:
-            print(err)
+            print('Operational', err)
             errors = err
         except sqlite3.ProgrammingError as err:
-            print(err)
+            print('Programing', err)
             errors = err
         except Exception as err:
             print(f'something goes wrong: {err}')

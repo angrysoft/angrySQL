@@ -112,6 +112,12 @@ class BaseDatabase:
         for idx, col in enumerate(self._cur.description):
             if hasattr(new_model, col[0]):
                 setattr(new_model, col[0], row[idx])
+                
+        for col in new_model.columns():
+            _col = getattr(new_model, col.column_name)
+            if isinstance(_col, Column):
+                setattr(new_model, col.column_name, None)
+            
         return new_model
                     
     def commit(self):
@@ -166,7 +172,7 @@ class BaseQuery:
         if not isinstance(model, MetaBaseModel) and not isinstance(model, BaseModel):
             raise ValueError('This is not a model object')
         self.model = model
-        self.columns = model.columns()
+        self.model_columns = model.columns()
         self._where = list()
         self._order = list()
         self._sql_base = ''
@@ -185,16 +191,20 @@ class BaseQuery:
 class Select(BaseQuery):
     def __init__(self, model):
         super(Select, self).__init__(model)
-        self._sql_base = f"SELECT {','.join([c.column_full_name for c in self.columns])} FROM {model.table_name}"
+        self._sql_base = f"SELECT {','.join([c.column_full_name for c in self.model_columns])} FROM {model.table_name}"
 
     def get(self, model_id):
             self.__db__.execute(f"{self._sql_base} WHERE {self._get_primary_key_name()} = '{model_id}'")
             return self.__db__.fetchone(self.model)
     
     def _get_primary_key_name(self):
-        for c in self.columns:
+        for c in self.model_columns:
             if c.primary_key:
                 return c.column_name
+    
+    def columns(self, *cols):
+        self._sql_base = f"SELECT {','.join([c.column_full_name for c in cols])} FROM {self.model.table_name}"
+        return self
 
     def all(self):
         self.__db__.execute(self.sql)
@@ -232,9 +242,10 @@ class Insert(BaseQuery):
         self.errors = self.__db__.execute(self.sql)
 
     def _get_column_and_values(self):
+        #TODO add check if columnt is nullable
         values = list()
         names = list()
-        for c in self.columns:
+        for c in self.model_columns:
             val = getattr(self.model, c.column_name)
             if not isinstance(val, Column):
                 names.append(c.column_name)
@@ -247,7 +258,7 @@ class Update(BaseQuery):
         super(Update, self).__init__(model)
         self._sql_base = f"UPDATE {model.table_name} SET {self._get_column_and_values()}"
 
-    def all(self):
+    def do(self):
         self.errors = self.__db__.execute(self.sql)
         return self.__db__.rowcount
 
@@ -257,7 +268,7 @@ class Update(BaseQuery):
 
     def _get_column_and_values(self):
         values = list()
-        for c in self.columns:
+        for c in self.model_columns:
             val = getattr(self.model, c.column_name)
             if not isinstance(val, Column):
                 values.append("{} = '{}'".format(c.column_full_name,val))
@@ -273,27 +284,27 @@ class Delete(BaseQuery):
         self._where.extend(conditions)
         return self
 
-    def all(self):
+    def do(self):
         self.__db__.execute(self.sql)
         return self.__db__.rowcount
 
 
 class Join(Select):
     def __init__(self, *models):
-        self.columns = list()
+        self.model_columns = list()
         self._joins = list()
         self._where = list()
         self._order = list()
         for item in models:
             if isinstance(item, Column):
-                self.columns.append(item)
+                self.model_columns.append(item)
             elif isinstance(item, BaseModel) or isinstance(item, MetaBaseModel):
                 for col in item.columns():
-                    self.columns.append(col)
+                    self.model_columns.append(col)
 
         self._sql_base = 'SELECT {} FROM {}'.format(
                 ','.join(['{} AS {}'.format(c.column_full_name,
-                                            self._get_column_alias(c.column_full_name)) for c in self.columns]),
+                                            self._get_column_alias(c.column_full_name)) for c in self.model_columns]),
                 self._get_table_name())
 
     @staticmethod
@@ -304,7 +315,7 @@ class Join(Select):
         return '_'.join([table, column])
 
     def _get_table_name(self):
-        full_name = self.columns[0].column_full_name
+        full_name = self.model_columns[0].column_full_name
         return full_name.split('.', 1)[0]
 
     def inner(self, table_name, condition):
@@ -316,7 +327,7 @@ class Join(Select):
     def all(self):
         self.__db__.execute(self.sql)
         func = {}
-        for c in self.columns:
+        for c in self.model_columns:
             print(self._get_column_alias(c.column_full_name))
             func[self._get_column_alias(c.column_full_name)] = Column(String())
 
