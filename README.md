@@ -1,5 +1,5 @@
 # angrySQL
- Simple Sql helper inspired by sqlalchemy but much simpler
+ Simple Sql helper inspired by sqlalchemy but much simpler ( its my test field )
 
 ## dependecies
 * [MySQLdb](https://github.com/PyMySQL/mysqlclient-python) 
